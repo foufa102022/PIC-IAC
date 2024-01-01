@@ -1,0 +1,57 @@
+Vagrant.configure("2") do |config|
+    # Ajout de l'utilisateur Vagrant en tant que sudo
+    config.vm.provision "shell", inline: <<-SHELL
+      # Ajout de l'utilisateur Vagrant au groupe sudo
+      sudo usermod -aG sudo vagrant
+      # Configuration sans mot de passe pour les commandes sudo (à des fins de test seulement)
+      echo "vagrant ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers.d/vagrant
+    SHELL
+  
+    # Nombre de machines à créer
+    num_machines = 2  # Vous pouvez ajuster ce nombre selon vos besoins
+    host_port = 8080
+  
+    # Boucle pour créer et configurer chaque machine
+    (1..num_machines).each do |i|
+      config.vm.define "ubuntu#{i}" do |machine|
+        machine.vm.box = "ubuntu/bionic64"
+        machine.vm.hostname = "ubuntu#{i}"  # Nom de la machine
+        machine.vm.network "forwarded_port", guest: 80, host: host_port
+        machine.vm.network "private_network", type: "dhcp"
+        machine.vm.provider "virtualbox" do |vb|
+          vb.memory = "1024"
+          vb.cpus = 1
+        end
+  
+        # Provision Ansible pour le premier playbook
+        machine.vm.provision "ansible" do |ansible|
+          ansible.playbook = "/home/foufa/aytomation-part2/install-docker.yml"
+        end
+  
+        # Provision Ansible pour le deuxième playbook
+        machine.vm.provision "ansible" do |ansible|
+          ansible.playbook = "/home/foufa/aytomation-part2/docker_configuration.yml"
+        end
+  
+        # Provision Ansible pour le troisième playbook
+        machine.vm.provision "ansible" do |ansible|
+          ansible.playbook = "/home/foufa/aytomation-part2/install_remote-terraform.yml"
+        end
+  
+        # Provision Ansible pour le quatrième playbook
+        machine.vm.provision "ansible" do |ansible|
+          ansible.playbook = "/home/foufa/aytomation-part2/deploy_container22.yml"
+          ansible.extra_vars = { external_port: host_port }
+        end
+  
+        # Ajout d'une provision pour redémarrer la machine à la fin du provisionnement
+        machine.vm.provision "shell", inline: "sudo reboot", run: "always"
+  
+        # Incrémentation du port pour la prochaine machine
+        host_port += 1
+      end
+    end
+  end
+  
+  
+  

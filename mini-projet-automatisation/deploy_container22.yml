@@ -1,0 +1,41 @@
+---
+- name: Deploy Docker Containers with Terraform (ubuntu)
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Create Terraform directory on the target machine
+      file:
+        path: /home/vagrant
+        state: directory
+
+    - name: Template main.tf file with correct external_port
+      template:
+        src: /home/foufa/aytomation-part2/main.tf 
+        dest: /home/vagrant/
+   
+
+    - name: Set correct permissions for Terraform directory
+      file:
+        path: /home/vagrant/
+        recurse: yes
+        owner: vagrant
+        group: vagrant
+        mode: '0755'
+
+    - name: Remove Terraform lock file (if exists)
+      command: "rm -rf /home/vagrant/.terraform"
+      ignore_errors: yes
+
+    - name: Run Terraform Init
+      command: "terraform init -force-copy"
+      args:
+        chdir: /home/vagrant/
+      become: true
+
+    - name: Run Terraform Apply to deploy Docker containers
+      command: "terraform apply -auto-approve"
+      args:
+        chdir: /home/vagrant/
+      become: true
