@@ -1,0 +1,40 @@
+---
+- name: Deploy Docker Containers with Terraform (ubuntu)
+  hosts: ubuntu22
+  become: true  # Ajout de cette ligne pour exécuter toutes les tâches en tant qu'utilisateur root
+  gather_facts: false
+
+  tasks:
+    - name: Create Terraform directory on the target machine
+      file:
+        path: /home/vagrant
+        state: directory
+
+    - name: Copy Terraform files to the target machine
+      copy:
+        src: /home/foufa/MicroProjet/Vagrant/vagrant2/main.tf
+        dest: /home/vagrant/
+
+    - name: Set correct permissions for Terraform directory
+      file:
+        path: /home/vagrant/
+        recurse: yes
+        owner: vagrant
+        group: vagrant
+        mode: '0755'
+
+    - name: Remove Terraform lock file (if exists)
+      command: "rm -rf /home/vagrant/.terraform"
+      ignore_errors: yes
+
+    - name: Run Terraform Init
+      command: "terraform init -force-copy"
+      args:
+        chdir: /home/vagrant/
+      become: true  # Exécuter la commande avec sudo
+
+    - name: Run Terraform Apply to deploy Docker containers
+      command: "terraform apply -auto-approve"
+      args:
+        chdir: /home/vagrant/
+      become: true  # Exécuter la commande avec sudo
